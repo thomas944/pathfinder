@@ -9,6 +9,7 @@ var isJumping = false;
 var jumpSpd = 0;
 
 var score = 0;
+var timer = 0;
 
 function startGame() {
     myGameArea.start();
@@ -75,8 +76,8 @@ function createComponent(width, height, x, y, color, type){
         }
     }
 
-    this.moveRight = function(){
-        this.x += 1;
+    this.newPos = function(){
+        this.x += this.speedX;
     }
 
     this.collision = function(otherObj){
@@ -123,7 +124,10 @@ function everyinterval(n) {
 
 function updateCanvas(){
     var x, y;
-
+    
+    if (timer >= 6){
+        myGameArea.stop();
+    }
     for (i=0;i<myObstacles.length;i+=1){
         if (player.collision(myObstacles[i])){
         myGameArea.stop();
@@ -132,12 +136,14 @@ function updateCanvas(){
     }
     myGameArea.clear();
     myGameArea.frameNo += 1;
-    if (myGameArea.frameNo == 1 || everyinterval(100)){
-        x = myGameArea.canvas.width;
-        y = myGameArea.canvas.height - 100; 
-        myObstacles.push(new createComponent(10, 500, x, y, "green")) 
-        score +=1;      
+    if (myGameArea.frameNo == 1 || everyinterval(100) && (timer <=5)){
+            x = myGameArea.canvas.width;
+            y = myGameArea.canvas.height - 100; 
+            myObstacles.push(new createComponent(10, 500, x, y, "green")) 
+            score +=1;      
+            timer ++;
         }
+    
     for (i = 0; i < myObstacles.length; i+=1){
         myObstacles[i].x += -6  ;
          myObstacles[i].draw();
@@ -147,7 +153,12 @@ function updateCanvas(){
     player.makeFall();
     player.draw();
     scoreBoard.draw();
+    
 
+}
+
+function moveRight(){
+    player.speedX += 3;
 }
 
 function accelerate(n) {
