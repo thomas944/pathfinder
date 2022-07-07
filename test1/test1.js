@@ -4,17 +4,18 @@ var canvasWidth = 1000;
 
 var player;
 var myObstacles = [];
-var score;
 
 var isJumping = false;
 var jumpSpd = 0;
+
+var score = 0;
 
 function startGame() {
     myGameArea.start();
 
     player = new createComponent(100,100,10,100, "red");
     obstacle = new createComponent(20, 1000, 700, 500, "green");
-    //scoreBoard = new createScoreBoard(30, black, "text", 100, 100);
+    scoreBoard = new createScoreBoard("30px consolas", 100, 100, "black");
 }
 
 var myGameArea = {
@@ -97,15 +98,21 @@ function createComponent(width, height, x, y, color, type){
     
 }
 
-function createScoreBoard(size, color, text, x ,y){
-    this.size = size;
-    this.text = text;
+function createScoreBoard(fontAndSize, x, y, color){
     this.x = x;
     this.y = y;
-    ctx = myGameArea.context;
-    ctx.font = size;
-    ctx.fillStyle = color;
-    ctx.fillText(this.text. this.x, this.y);
+    this.font = fontAndSize;
+    this.color = color;
+    //ctx = myGameArea.context;
+    //ctx.font = size;
+    //ctx.fillStyle = color;
+    //ctx.fillText(this.text. this.x, this.y);
+    this.draw = function(){
+        ctx = myGameArea.context;
+        ctx.font = fontAndSize;
+        ctx.fillStyle = color;
+        ctx.fillText(this.text, this.x, this.y);
+    }
 
 }
 
@@ -116,6 +123,7 @@ function everyinterval(n) {
 
 function updateCanvas(){
     var x, y;
+
     for (i=0;i<myObstacles.length;i+=1){
         if (player.collision(myObstacles[i])){
         myGameArea.stop();
@@ -127,15 +135,18 @@ function updateCanvas(){
     if (myGameArea.frameNo == 1 || everyinterval(100)){
         x = myGameArea.canvas.width;
         y = myGameArea.canvas.height - 100; 
-        myObstacles.push(new createComponent(10, 500, x, y, "green"))       
+        myObstacles.push(new createComponent(10, 500, x, y, "green")) 
+        score +=1;      
         }
     for (i = 0; i < myObstacles.length; i+=1){
         myObstacles[i].x += -6  ;
          myObstacles[i].draw();
     }
-   
+    scoreBoard.text = "SCORE: " + score;
+    scoreBoard.draw();
     player.makeFall();
     player.draw();
+    scoreBoard.draw();
 
 }
 
@@ -147,8 +158,6 @@ document.body.onkeyup = function(e){
     if (e.key === ' '){
         accelerate(1);
     }    
-    console.log(player.speedY)
-    
 }
 
 document.body.onkeydown = function(e){
