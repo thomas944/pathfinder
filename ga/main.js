@@ -2,11 +2,14 @@ var canvasHeight = 400;
 var canvasWidth = 500;
 
 var test;
+var test2;
 
 function startGame(){
     myGameArea.start();
     test = new createDot();
-    test.createBrain(1000);
+    test2 = new createDot();
+    test2.createBrain(400);
+    test.createBrain(400);
 }
 
 var myGameArea = {
@@ -28,10 +31,11 @@ var myGameArea = {
 }
 
 var steps = 0;
+var dead = false;
+
 function createDot(){
     var directionsX = [];
     var directionsY = [];
-    
     var pos = [];            //height BY width
     pos.push(canvasHeight/2);
     pos.push(canvasWidth/2)
@@ -41,18 +45,23 @@ function createDot(){
     vel.push(0);
     acc.push(0);
     acc.push(0);
-    var start = true;
+
+    var spawn = true;
 
     this.draw = function(){
         ctx = myGameArea.context;
         ctx.fillStyle = "blue"
-        if (start){
+        if (spawn){
             ctx.fillRect(250,200,10,10);
-            start = false;
+            spawn = false;
+        }
+        if (this.dead){
+            ctx.fillStyle = "red"
+            ctx.fillRect(pos[1],pos[0],10,10);
         }
         else{
             ctx.fillRect(pos[1],pos[0],10,10);
-        }    
+        }   
     }
 
     this.createBrain = function(size){
@@ -70,13 +79,28 @@ function createDot(){
             acc[1] = directionsY[steps];
             steps = steps + 1;
         }
+        else{
+            this.dead = true;   //if runs out of steps, dies
+        }
         //console.log(pos[1]);
-        pos[0] = pos[0] + vel[0]+ acc[0];
-        pos[1] = pos[1] + vel[1]+ acc[0];
-    
-        
+        vel[0] = vel[0] + acc[0];
+        vel[1] = vel[1] + acc[1];
+        pos[0] = pos[0] + vel[0]; //pos[0] is the Y
+        pos[1] = pos[1] + vel[1]; //pos[1] is the X
     }
+
+    this.updatePosition = function(){
+        if (!this.dead){
+            this.move();
+            if ((pos[1] < 10 ) || (pos[1] > canvasWidth-10) || (pos[0] < 10) || (pos[0] > canvasHeight-10)){
+                this.dead = true;
+            }
+        }
+    }
+
 }
+
+
 
 function flip(min, max) {
     if ((Math.floor(Math.random() * (max - min + 1) ) + min) === 0){
@@ -87,11 +111,13 @@ function flip(min, max) {
 
 function updateCanvas(){
     myGameArea.clear();
-    test.move();
+    test.updatePosition();
+    test2.updatePosition();
+    test2.draw();
     test.draw();
-
     steps++;
-    if (steps > 1000){
+
+    if(steps>2000){
         myGameArea.stop();
     }
     console.log(steps)
