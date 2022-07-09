@@ -1,17 +1,6 @@
 var canvasHeight = 400;
 var canvasWidth = 500;
 
-var test;
-var test2;
-
-function startGame(){
-    myGameArea.start();
-    test = new createDot();
-    test2 = new createDot();
-    test2.createBrain(400);
-    test.createBrain(400);
-}
-
 var myGameArea = {
     canvas : document.createElement("canvas"),
     start : function() {
@@ -30,77 +19,111 @@ var myGameArea = {
     }
 }
 
-var steps = 0;
-var dead = false;
+class Vector{
+    constructor(x,y){
+        this.x = x;
+        this.y = y;
+    }
+}
+class Dot{
+    constructor(){
+        this.brain = new Brain(500);
 
-function createDot(){
-    var directionsX = [];
-    var directionsY = [];
-    var pos = [];            //height BY width
-    pos.push(canvasHeight/2);
-    pos.push(canvasWidth/2)
-    var vel = [];
-    var acc = [];
-    vel.push(0);
-    vel.push(0);
-    acc.push(0);
-    acc.push(0);
+        this.pos = new Vector(canvasWidth/2, canvasHeight/2);
+        this.vel = new Vector(0,0);
+        this.acc = new Vector(0,0);
 
-    var spawn = true;
+        this.spawn = true;
+        this.dead = false;
+    }
 
-    this.draw = function(){
-        ctx = myGameArea.context;
-        ctx.fillStyle = "blue"
-        if (spawn){
-            ctx.fillRect(250,200,10,10);
-            spawn = false;
+    print(){
+        console.log("hi")
+    }
+
+    show(){
+        this.ctx = myGameArea.context;
+        this.ctx.fillStyle = "blue";
+        if (this.spawn){
+            this.ctx.fillRect(250,200,10,10);
+            this.spawn = false;
         }
         if (this.dead){
-            ctx.fillStyle = "red"
-            ctx.fillRect(pos[1],pos[0],10,10);
+            this.ctx.fillStyle = "red";
+            this.ctx.fillRect(this.pos.x, this.pos.y, 10, 10);
         }
         else{
-            ctx.fillRect(pos[1],pos[0],10,10);
-        }   
-    }
-
-    this.createBrain = function(size){
-        for(i=0; i<size; i+=1){
-            directionsX.push(1*flip(0,1)*Math.random());
-            directionsY.push(1*flip(0,1)*Math.random());
-            
+            this.ctx.fillRect(this.pos.x, this.pos.y, 10, 10);
         }
     }
 
-    this.move = function(){
-        
-        if (directionsX.length > steps){
-            acc[0] = directionsX[steps];
-            acc[1] = directionsY[steps];
-            steps = steps + 1;
-        }
+    move(){
+        if(this.brain.directions.length-1 > this.brain.steps){
+            this.acc.x = this.brain.directions[this.brain.steps].x;
+            this.acc.y = this.brain.directions[this.brain.steps].y;
+            this.brain.steps +=1;
+        } 
         else{
-            this.dead = true;   //if runs out of steps, dies
+            this.dead = true;
         }
-        //console.log(pos[1]);
-        vel[0] = vel[0] + acc[0];
-        vel[1] = vel[1] + acc[1];
-        pos[0] = pos[0] + vel[0]; //pos[0] is the Y
-        pos[1] = pos[1] + vel[1]; //pos[1] is the X
+        this.vel.x = this.vel.x + this.acc.x;
+        this.vel.y = this.vel.y + this.acc.y;
+        this.vel.x = limitVelocity(this.vel.x);
+        this.vel.y = limitVelocity(this.vel.y);
+        this.pos.x = this.pos.x + this.vel.x;
+        this.pos.y = this.pos.y + this.vel.y;
+        console.log(this.vel.x + this.acc.x);
     }
 
-    this.updatePosition = function(){
-        if (!this.dead){
+    updatePosition(){
+        if(!this.dead){
             this.move();
-            if ((pos[1] < 10 ) || (pos[1] > canvasWidth-10) || (pos[0] < 10) || (pos[0] > canvasHeight-10)){
+            if ((this.pos.x < 10 ) || (this.pos.x > canvasWidth-10) || (this.pos.y < 10) || (this.pos.y > canvasHeight-10)){
                 this.dead = true;
-            }
+            }    
         }
-    }
 
+    }
 }
 
+class Brain{
+    constructor(size){
+        this.directions = [];
+        this.steps = 0;
+        var i;
 
+        for (i=0; i<size; i+=1){
+            this.directions.push(new Vector(1*flip(0,1)*Math.random(), 1*flip(0,1)*Math.random()));
+            //console.log(this.directions);
+        }
+
+    }
+}
+
+class Population{
+    constructor(size){
+        var i;
+
+        this.population = [];
+        for(i=0; i<size; i+=1){
+            this.population.push(new Dot());
+        }
+    }
+    show(){
+        var i;
+
+        for(i=0; i<this.population.length; i+=1){
+            this.population[i].show();
+        }
+    }
+    updatePosition(){
+        var i;
+        
+        for(i=0; i<this.population.length; i++){
+            this.population[i].updatePosition();
+        }
+    }
+}
 
 function flip(min, max) {
     if ((Math.floor(Math.random() * (max - min + 1) ) + min) === 0){
@@ -109,16 +132,27 @@ function flip(min, max) {
     else{ return 1; } 
 }
 
+function limitVelocity(currentVelocity){
+    if (currentVelocity >= 5){
+        return 5;
+    }
+    if (currentVelocity <= -5){
+        return -5;
+    }
+    return currentVelocity;
+}
+
+var myPopulation;
+
+function startGame(){
+    myGameArea.start();
+    myPopulation = new Population(10);
+}
+
 function updateCanvas(){
     myGameArea.clear();
-    test.updatePosition();
-    test2.updatePosition();
-    test2.draw();
-    test.draw();
-    steps++;
+    myPopulation.show(); 
+    myPopulation.updatePosition();
+    
 
-    if(steps>2000){
-        myGameArea.stop();
-    }
-    console.log(steps)
 }
