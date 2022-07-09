@@ -151,7 +151,7 @@ function startGame(){
 
 function updateCanvas(){
     myGameArea.clear();
-    myPopulation.show();
+    myPopulation.show(); 
     myPopulation.updatePosition();
     
 
