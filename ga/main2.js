@@ -4,6 +4,8 @@ var canvasWidth = 500;
 var objectiveHeight = 30;
 var objectiveWidth = 70;
 
+var howManySteps = 500;
+
 var myGameArea = {
     canvas : document.createElement("canvas"),
     start : function() {
@@ -30,9 +32,9 @@ class Vector{
 }
 class Dot{
     constructor(objX, objY){
-        this.brain = new Brain(500);
+        this.brain = new Brain(howManySteps);
 
-        this.pos = new Vector(canvasWidth/2, 100);
+        this.pos = new Vector(canvasWidth/2, 200);
         this.vel = new Vector(0,0);
         this.acc = new Vector(0,0);
 
@@ -113,10 +115,10 @@ class Dot{
         return this.fitness;
     }
 
-    collision(){
-        if ((Math.sqrt((Math.pow(Math.abs(this.pos.x-this.ObjX),2)) + (Math.pow(Math.abs(this.pos.y-this.ObjY),2)))) < 5){
-            return true;
-        } 
+    crossOver(){
+        this.hybridBaby = new Dot((canvasWidth/2)-30,0);
+        this.hybridBaby.brain.clone();
+        return this.hybridBaby;
     }
 
 }
@@ -133,6 +135,32 @@ class Brain{
         }
 
     }
+
+    clone(){
+        var i;
+        this.clone = new Brain(this.directions.length);
+
+        for(i=0; i<this.directions.length; i+=1) {
+            this.clone.directions[i] = this.directions[i];
+        }
+        return this.clone;   
+    }
+
+    mutate(){
+        var mutationRate = 0.01;
+        var i;
+        var howManyChanges = this.directions.length * mutationRate;
+        var tempArray = [];
+        for (i=0 ;i<howManyChanges; i++){
+            tempArray.push(new Vector(1*flip(0,1)*Math.random(), 1*flip(0,1)*Math.random()));
+        }
+
+        for (i=0; i<howManyChanges; i++){
+            var indexToBeChanged = getRandomInt(0,this.directions.length);
+            this.directions[indexToBeChanged] = tempArray[i];
+        }
+    }
+    
 }
 
 class Population{
@@ -142,7 +170,9 @@ class Population{
         this.ObjX = (canvasWidth/2)-30;
         this.ObjY = 0;
         this.fitnessSum = 0;
-        
+        this.size = size;
+        this.generation = 1;
+
         this.population = [];
         for(i=0; i<size; i+=1){
             this.population.push(new Dot((canvasWidth/2)-30,0));
@@ -168,7 +198,7 @@ class Population{
         }
     }
 
-    calculateFitness(){
+    calculateFitnessPop(){
         var i;
         var sum = 0;
         for(i=0; i<this.population.length; i+=1){
@@ -176,6 +206,7 @@ class Population{
             //console.log(this.population[i].calculateFitness());
             sum += this.population[i].calculateFitness();
         }
+        this.fitnessSum = sum;
         return sum;
     }
 
@@ -209,12 +240,72 @@ class Population{
         this.ctx.fillText(this.ctx.text, 100, 100);   
     }
 
+
+    selectParent(){
+        var temp = getRandFloat(0,this.fitnessSum);
+        //console.log(temp);
+        var tempSum = 0;
+        var i;
+        for (i=0; i<this.population.length; i+=1){
+            tempSum += this.population[i].calculateFitness();
+            //console.log(this.population[i].calculateFitness());
+            //console.log(tempSum);
+            if (tempSum > temp){
+                //console.log("BREAK")
+                return this.population[i];
+            }
+        }
+        return null;
+    }
+
     naturalSelection(){
+        this.newPopulation = [];
+        var i;      
+        this.parent = null;
+
+        for (i=0; i<this.population.length; i+=1){
+            this.newPopulation.push(new Dot((canvasWidth/2)-30,0));
+        }
+
+        for (i=0; i<this.newPopulation.length; i+=1){
+
+            // var temp = getRandFloat(0,this.fitnessSum);
+            // var tempSum = 0;
+            // var j;
+            // for (j=0; j<this.population.length; j+=1){
+            //     tempSum += this.population[j].calculateFitness();
+            //     if (tempSum > temp){
+            //         break;
+            //     }
+            // } 
+            // this.parent = this.population[j-1];
+            // this.newPopulation[i] = this.parent;
+            this.parent = this.selectParent();
+            this.newPopulation[i] = this.parent.crossOver();
+        
+            //console.log(j);
+            //console.log(this.population[j].calculateFitness());
+            //this.newPopulation[i] = this.parent.crossOver();
+        }
+        //console.log(this.population);
+        //console.log(this.newPopulation);
+        // for (i=0; i<this.newPopulation.length; i+=1){
+        //     this.newPopulation[i].crossOver();
+        // }
+        // console.log(this.newPopulation);
+
+        //this.population = this.newPopulation.clone();
+        this.population = this.newPopulation;
+        //console.log(this.population);
+        this.generation +=1;
 
     }
 
-    selectParent(){
-        
+    mutate(){
+        var i;
+        for (i=0; i<this.population.length; i++){
+            this.population[i].brain.mutate();
+        }
     }
     
 }
@@ -233,11 +324,12 @@ class Objective{
         this.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 }
-function checkSafe(dotx, doty, objX, objY){
-    if ((Math.sqrt((Math.pow(Math.abs(dotx-objX),2)) + (Math.pow(Math.abs(doty-objY),2)))) < 5){
-        return true;
-    }
 
+function getRandomInt(min, max){
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+function getRandFloat(min, max){
+    return (Math.random() * (max - min) + min);
 }
 
 function flip(min, max) {
@@ -270,7 +362,12 @@ function updateCanvas(){
     myGameArea.clear();
 
     if (myPopulation.allDotsDead()){
-        myPopulation.calculateFitness();
+        myGameArea.stop();
+        console.log(myPopulation.calculateFitnessPop())
+        //console.log(myPopulation);
+        //console.log(myPopulation.selectParent());
+        myPopulation.naturalSelection();
+        myPopulation.mutate();
     
     }
     myPopulation.displayStats();
