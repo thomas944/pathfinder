@@ -4,7 +4,8 @@ var canvasWidth = 500;
 var objectiveHeight = 30;
 var objectiveWidth = 70;
 
-var howManySteps = 500;
+var howManySteps = 100;
+var mutationRate = 0.01
 
 var myGameArea = {
     canvas : document.createElement("canvas"),
@@ -120,9 +121,14 @@ class Dot{
         return this.fitness;
     }
 
-    crossOver(){
+    cloneDot(){   //crossOver
+        var i;
+        //console.log(this.brain)
         this.hybridBaby = new Dot((canvasWidth/2)-30,0);
-        this.hybridBaby.brain.clone();
+        //this.newBrain = new Brain(howManySteps);
+        
+        this.hybridBaby.brain = this.brain.cloneBrain();
+        //console.log(this.hybridBaby);
         return this.hybridBaby;
     }
 
@@ -141,7 +147,7 @@ class Brain{
 
     }
 
-    clone(){
+    cloneBrain(){
         var i;
         this.clone = new Brain(this.directions.length);
 
@@ -152,9 +158,9 @@ class Brain{
     }
 
     mutate(){
-        var mutationRate = 0.01;
+        var mutaRate = mutationRate;
         var i;
-        var howManyChanges = this.directions.length * mutationRate;
+        var howManyChanges = this.directions.length * mutaRate;
         var tempArray = [];
         for (i=0 ;i<howManyChanges; i++){
             tempArray.push(new Vector(1*flip(0,1)*Math.random(), 1*flip(0,1)*Math.random()));
@@ -238,11 +244,21 @@ class Population{
             
         }
 
+        var temp = 0;
+        // for(i=0; i<this.population.length; i+=1){
+        //     if (this.calculateFitnessPop() > BestFitnessofPopulation){
+        //         BestFitnessofPopulation = this.calculateFitnessPop();
+        //     }
+        // }
+        if(this.allDotsDead()){
+            temp = this.calculateFitnessPop();
+        }
+
         this.ctx = myGameArea.context;
-        this.ctx.font = "30px consolas";
+        this.ctx.font = "15px consolas";
         this.ctx.fillStyle = "black";
-        this.ctx.text = "SCORE: " + this.reachedGoal;
-        this.ctx.fillText(this.ctx.text, 100, 100);   
+        this.ctx.text = "SCORE: " + this.reachedGoal + " generation " + this.generation + " populationFitness " + temp;
+        this.ctx.fillText(this.ctx.text, 0, 100);   
     }
 
 
@@ -265,49 +281,22 @@ class Population{
 
     naturalSelection(){
         this.newPopulation = [];
-        var i;      
+        var i;
         this.parent = null;
-        this.reachedGoal = 0;
-
-        //console.log(this.selectBestDot())
-        //console.log(this.population)
-        this.newPopulation[0] = this.population[this.selectBestDot()].crossOver();
-
-        for (i=1; i<this.population.length; i+=1){
-            this.newPopulation.push(new Dot((canvasWidth/2)-30,0));
-        }
-
-        for (i=1; i<this.newPopulation.length; i+=1){
-
-            // var temp = getRandFloat(0,this.fitnessSum);
-            // var tempSum = 0;
-            // var j;
-            // for (j=0; j<this.population.length; j+=1){
-            //     tempSum += this.population[j].calculateFitness();
-            //     if (tempSum > temp){
-            //         break;
-            //     }
-            // } 
-            // this.parent = this.population[j-1];
-            // this.newPopulation[i] = this.parent;
-            this.parent = this.selectParent();
-            this.newPopulation[i] = this.parent.crossOver();
+        console.log(this.selectBestDot());
+        var champ = this.population[this.selectBestDot()].cloneDot();
         
-            //console.log(j);
-            //console.log(this.population[j].calculateFitness());
-            //this.newPopulation[i] = this.parent.crossOver();
-        }
-        //console.log(this.population);
-        //console.log(this.newPopulation);
-        // for (i=0; i<this.newPopulation.length; i+=1){
-        //     this.newPopulation[i].crossOver();
-        // }
-        // console.log(this.newPopulation);
+        this.newPopulation.push(champ);
 
-        //this.population = this.newPopulation.clone();
+        for(i=1; i<this.population.length; i+=1){
+            this.parent = this.selectParent();
+            this.newPopulation.push(this.parent.cloneDot());
+
+        }
+        //console.log(this.population)
+        this.generation = this.generation+1;
         this.population = this.newPopulation;
         //console.log(this.population);
-        this.generation +=1;
 
     }
 
@@ -330,6 +319,8 @@ class Population{
             this.population[i].brain.mutate();
         }
     }
+
+
     
 }
 
@@ -377,7 +368,7 @@ var myObjective;
 
 function startGame(){
     myGameArea.start();
-    myPopulation = new Population(10);
+    myPopulation = new Population(5);
     myObjective = new Objective((canvasWidth/2)-30,0,objectiveHeight,objectiveWidth);
 }
 
@@ -385,12 +376,15 @@ function updateCanvas(){
     myGameArea.clear();
 
     if (myPopulation.allDotsDead()){
-        myGameArea.stop();
+        if(myPopulation.generation === 100){
+            myGameArea.stop();
+        }
+        //myGameArea.stop();
         (myPopulation.calculateFitnessPop())
         console.log(myPopulation.calculateFitnessPop());
         //console.log(myPopulation);
-        //console.log(myPopulation.selectParent());
         myPopulation.naturalSelection();
+        console.log(myPopulation.generation);
         myPopulation.mutate();
     
     }
