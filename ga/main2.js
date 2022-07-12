@@ -4,8 +4,11 @@ var canvasWidth = 500;
 var objectiveHeight = 30;
 var objectiveWidth = 70;
 
-var howManySteps = 100;
-var mutationRate = 0.01
+var howManySteps = 300;
+var mutationRate = 0.01;
+
+var dotSpawnX = canvasWidth/2;
+var dotSpawnY = 350;
 
 var myGameArea = {
     canvas : document.createElement("canvas"),
@@ -35,7 +38,7 @@ class Dot{
     constructor(objX, objY){
         this.brain = new Brain(howManySteps);
 
-        this.pos = new Vector(canvasWidth/2, 200);
+        this.pos = new Vector(dotSpawnX, dotSpawnY);
         this.vel = new Vector(0,0);
         this.acc = new Vector(0,0);
 
@@ -45,6 +48,8 @@ class Dot{
         this.ObjX = objX;
         this.ObjY = objY;
         this.safe = false;
+        this.isBest = false;
+        
     }
 
     print(){
@@ -53,17 +58,21 @@ class Dot{
 
     show(){
         this.ctx = myGameArea.context;
-        this.ctx.fillStyle = "blue";
+        this.ctx.fillStyle = "black";
+        if(this.isBest){
+            this.ctx.fillStyle = "green";
+            this.ctx.fillRect(this.pos.x, this.pos.y, 10, 10);
+        }
         if (this.spawn){
-            this.ctx.fillRect(250,200,10,10);
+            this.ctx.fillRect(dotSpawnX, dotSpawnY, 5,5);
             this.spawn = false;
         }
         if (this.dead){
             this.ctx.fillStyle = "red";
-            this.ctx.fillRect(this.pos.x, this.pos.y, 10, 10);
+            this.ctx.fillRect(this.pos.x, this.pos.y, 5, 5);
         }
         else{
-            this.ctx.fillRect(this.pos.x, this.pos.y, 10, 10);
+            this.ctx.fillRect(this.pos.x, this.pos.y, 5, 5);
         }
     }
 
@@ -111,7 +120,7 @@ class Dot{
 
     calculateFitness(){
         if(this.safe){
-            this.fitness = 1/(this.brain.steps * this.brain.steps)
+            this.fitness = (1/16) + 10000/(this.brain.steps * this.brain.steps)
         }
         else{
             this.distanceFromObj = Math.sqrt((Math.pow(Math.abs(this.pos.x-this.ObjX),2)) + (Math.pow(Math.abs(this.pos.y-this.ObjY),2)))
@@ -184,6 +193,8 @@ class Population{
         this.size = size;
         this.generation = 1;
 
+        this.minStep = howManySteps;
+
         this.population = [];
         for(i=0; i<size; i+=1){
             this.population.push(new Dot((canvasWidth/2)-30,0));
@@ -205,7 +216,12 @@ class Population{
     updatePosition(){
         var i;
         for(i=0; i<this.population.length; i+=1){
-            this.population[i].updatePosition();
+            if(this.population[i].brain.step > this.minStep){
+                this.population[i].dead = true;
+            }
+            else{
+                this.population[i].updatePosition();
+            }
         }
     }
 
@@ -244,23 +260,21 @@ class Population{
             
         }
 
-        var temp = 0;
-        // for(i=0; i<this.population.length; i+=1){
-        //     if (this.calculateFitnessPop() > BestFitnessofPopulation){
-        //         BestFitnessofPopulation = this.calculateFitnessPop();
-        //     }
-        // }
-        if(this.allDotsDead()){
-            temp = this.calculateFitnessPop();
-        }
+        this.ctx = myGameArea.context;
+        this.ctx.font = "15px consolas";
+        this.ctx.fillStyle = "black";
+        this.ctx.text = "SCORE: " + this.reachedGoal + " generation " + this.generation;
+        this.ctx.fillText(this.ctx.text, 0, 100);   
+    }
+
+    displayFitness(){
 
         this.ctx = myGameArea.context;
         this.ctx.font = "15px consolas";
         this.ctx.fillStyle = "black";
-        this.ctx.text = "SCORE: " + this.reachedGoal + " generation " + this.generation + " populationFitness " + temp;
-        this.ctx.fillText(this.ctx.text, 0, 100);   
+        this.ctx.text = "populationFitness  " + this.fitnessSum;
+        this.ctx.fillText(this.ctx.text, 0, 200);   
     }
-
 
     selectParent(){
         var temp = getRandFloat(0,this.fitnessSum);
@@ -285,7 +299,6 @@ class Population{
         this.parent = null;
         console.log(this.selectBestDot());
         var champ = this.population[this.selectBestDot()].cloneDot();
-        
         this.newPopulation.push(champ);
 
         for(i=1; i<this.population.length; i+=1){
@@ -296,6 +309,7 @@ class Population{
         //console.log(this.population)
         this.generation = this.generation+1;
         this.population = this.newPopulation;
+        this.population[0].isBest = true;
         //console.log(this.population);
 
     }
@@ -310,6 +324,10 @@ class Population{
                 maxIndex = i;
             }
         }
+        if(this.population[maxIndex].safe){
+            this.minStep = this.population[maxIndex].brain.steps;
+        }
+        
         return maxIndex;
     }
 
@@ -320,8 +338,13 @@ class Population{
         }
     }
 
-
-    
+    resetScore(){
+        var i;
+        for(i=0; i<this.population.length; i+=1){
+            this.seen[i] = 0;
+        }
+        this.reachedGoal = 0;
+    }
 }
 
 class Objective{
@@ -333,7 +356,7 @@ class Objective{
     }
     show(){
         this.ctx = myGameArea.context;
-        this.ctx.globalAlpha = 0.2;
+        this.ctx.globalAlpha = 0.5;
         this.ctx.fillStyle = "green"; 
         this.ctx.fillRect(this.x, this.y, this.width, this.height);
     }
@@ -368,7 +391,7 @@ var myObjective;
 
 function startGame(){
     myGameArea.start();
-    myPopulation = new Population(5);
+    myPopulation = new Population(200);
     myObjective = new Objective((canvasWidth/2)-30,0,objectiveHeight,objectiveWidth);
 }
 
@@ -376,22 +399,22 @@ function updateCanvas(){
     myGameArea.clear();
 
     if (myPopulation.allDotsDead()){
-        if(myPopulation.generation === 100){
+        if(myPopulation.generation === 40){
             myGameArea.stop();
         }
         //myGameArea.stop();
         (myPopulation.calculateFitnessPop())
-        console.log(myPopulation.calculateFitnessPop());
         //console.log(myPopulation);
         myPopulation.naturalSelection();
         console.log(myPopulation.generation);
         myPopulation.mutate();
+        myPopulation.resetScore();
     
     }
     myPopulation.displayStats();
+    myPopulation.displayFitness();
     myPopulation.show(); 
     myPopulation.updatePosition();
     myObjective.show();
-    
 
 }
