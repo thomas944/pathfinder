@@ -109,8 +109,13 @@ class Dot{
     }
 
     calculateFitness(){
-        this.distanceFromObj = Math.sqrt((Math.pow(Math.abs(this.pos.x-this.ObjX),2)) + (Math.pow(Math.abs(this.pos.y-this.ObjY),2)))
-        this.fitness = 1/(this.distanceFromObj * this.distanceFromObj);
+        if(this.safe){
+            this.fitness = 1/(this.brain.steps * this.brain.steps)
+        }
+        else{
+            this.distanceFromObj = Math.sqrt((Math.pow(Math.abs(this.pos.x-this.ObjX),2)) + (Math.pow(Math.abs(this.pos.y-this.ObjY),2)))
+            this.fitness = 1/(this.distanceFromObj * this.distanceFromObj);
+        }
 
         return this.fitness;
     }
@@ -262,12 +267,17 @@ class Population{
         this.newPopulation = [];
         var i;      
         this.parent = null;
+        this.reachedGoal = 0;
 
-        for (i=0; i<this.population.length; i+=1){
+        //console.log(this.selectBestDot())
+        //console.log(this.population)
+        this.newPopulation[0] = this.population[this.selectBestDot()].crossOver();
+
+        for (i=1; i<this.population.length; i+=1){
             this.newPopulation.push(new Dot((canvasWidth/2)-30,0));
         }
 
-        for (i=0; i<this.newPopulation.length; i+=1){
+        for (i=1; i<this.newPopulation.length; i+=1){
 
             // var temp = getRandFloat(0,this.fitnessSum);
             // var tempSum = 0;
@@ -301,9 +311,22 @@ class Population{
 
     }
 
+    selectBestDot(){
+        var bestFitness = 0;
+        var maxIndex = 0;
+        var i;
+        for(i=0; i<this.population.length; i+=1){
+            if(this.population[i].calculateFitness() > bestFitness){
+                bestFitness = this.population[i].calculateFitness();
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
+    }
+
     mutate(){
         var i;
-        for (i=0; i<this.population.length; i++){
+        for (i=1; i<this.population.length; i++){
             this.population[i].brain.mutate();
         }
     }
@@ -363,7 +386,8 @@ function updateCanvas(){
 
     if (myPopulation.allDotsDead()){
         myGameArea.stop();
-        console.log(myPopulation.calculateFitnessPop())
+        (myPopulation.calculateFitnessPop())
+        console.log(myPopulation.calculateFitnessPop());
         //console.log(myPopulation);
         //console.log(myPopulation.selectParent());
         myPopulation.naturalSelection();
